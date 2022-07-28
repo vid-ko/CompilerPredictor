@@ -10,7 +10,9 @@ public class BatchNorm extends Layer {
     private final INDArray biasMatrix;
     private final INDArray meanMatrix;
     private final INDArray varMatrix;
-    private static final float EPSILON = 0.000009999999747378752f;
+    //private static final float EPSILON = 0.000009999999747378752f;
+
+    private float epsilon = 0;
 
     public BatchNorm(float[] weights, float[] bias, float[] mean, float[] var) {
         weightMatrix = Nd4j.create(weights);
@@ -23,8 +25,14 @@ public class BatchNorm extends Layer {
     public float[] apply(float[] input) {
         INDArray inputMatrix = Nd4j.create(input);
 
-        INDArray result = Nd4j.diag(weightMatrix).mmul(inputMatrix.sub(meanMatrix).div(Transforms.sqrt(varMatrix.add(EPSILON)))).add(biasMatrix);
+        INDArray result = Nd4j.diag(weightMatrix)
+                .mmul(inputMatrix.sub(meanMatrix)
+                .div(Transforms.sqrt(varMatrix.add(epsilon)))).add(biasMatrix);
 
         return result.toFloatVector();
+    }
+
+    public void setEpsilon(float epsilon) {
+        this.epsilon = epsilon;
     }
 }

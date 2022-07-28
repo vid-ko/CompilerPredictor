@@ -10,6 +10,10 @@ public class Benchmarking {
     private static double onnxExecutionTime;
     private static double executionTime;
 
+    private static final String FILENAME_TEST_DATA = "testDataResNet.csv";
+    private static final int INPUT_SIZE = 147;
+    private static final String FILENAME_MODEL = "modelResNet.onnx";
+
     public static void main(String[] args){
 
         System.out.println("Starting... ");
@@ -17,7 +21,7 @@ public class Benchmarking {
 
 
         // read input data
-        float[] input = Arrays.copyOfRange(readTestDataFromCSV("src/test/java/test_data.csv"), 1, 121);
+        float[] input = Arrays.copyOfRange(readTestDataFromCSV("src/test/java/" + FILENAME_TEST_DATA), 1, INPUT_SIZE+1);
 
         var result = predictUsingCompilerPredictor(input);
         var onnxResult = predictUsingONNXRuntime(input);
@@ -38,12 +42,11 @@ public class Benchmarking {
     }
 
     private static float[] predictUsingCompilerPredictor(float[] input){
-        NeuralNetwork ann = new NeuralNetwork("model.onnx");
+        NeuralNetwork ann = new NeuralNetwork(FILENAME_MODEL);
 
         long startingTime = System.nanoTime();
         float[] result = ann.predict(input);
         long finishTime = System.nanoTime();
-        long duration = finishTime - startingTime;
         executionTime = (double)(finishTime - startingTime) / 1000000000;
         return result;
     }
@@ -54,17 +57,17 @@ public class Benchmarking {
         float[] output = new float[5];
         try {
 
-            float[][] features = new float[1][120];
-            for (int i = 0; i < 120; i++){
+            float[][] features = new float[1][INPUT_SIZE];
+            for (int i = 0; i < INPUT_SIZE; i++){
                 features[0][i] = testData[i];
             }
 
             OnnxTensor tensor = OnnxTensor.createTensor(env, features);
             Map<String, OnnxTensor> input = new HashMap<>();
-            input.put("0", tensor);
 
-            OrtSession session = env.createSession("model.onnx", new OrtSession.SessionOptions());
 
+            OrtSession session = env.createSession(FILENAME_MODEL, new OrtSession.SessionOptions());
+            input.put(session.getInputNames().toArray()[0].toString(), tensor);
 
 
             long startingTime = System.nanoTime();

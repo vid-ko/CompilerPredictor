@@ -16,11 +16,9 @@ public class Gemm extends Layer {
 
     @Override
     public float[] apply(float[] input) {
+
         INDArray inputMatrix = Nd4j.create(input);
-
-        //INDArray result = inputMatrix.mmul(weightMatrix.transpose()).add(biasMatrix);
         INDArray result = weightMatrix.mmul(inputMatrix).add(biasMatrix);
-
         return result.toFloatVector();
     }
 }
