@@ -9,7 +9,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NeuralNetwork {
+public class CompilerPredictor {
 
     private final List<Layer> layers;
 
@@ -20,7 +20,7 @@ public class NeuralNetwork {
      *
      * @param pathToOnnxFile specifies the path to the .onnx file
      */
-    public NeuralNetwork(String pathToOnnxFile){
+    public CompilerPredictor(String pathToOnnxFile){
         layers = new ArrayList<>();
         initWithOnnxModel(pathToOnnxFile);
     }
@@ -46,6 +46,7 @@ public class NeuralNetwork {
      * @param pathToOnnxFile
      */
     public void initWithOnnxModel(String pathToOnnxFile){
+        // TODO refactoring, make more dynamic, LayerNotFoundException
         try{
             var model = Onnx.ModelProto.parseFrom(new FileInputStream(pathToOnnxFile));
 
@@ -61,25 +62,31 @@ public class NeuralNetwork {
                                 .filter(i -> i.getName().equals(node.getInput(1)))
                                 .findAny()
                                 .orElse(null);
-                        layers.add(new Sub(get1DParamsFromTensor(tensor)));
+                        if(tensor != null){
+                            layers.add(new Sub(get1DParamsFromTensor(tensor)));
+                        }
                     }
                     case "Div" -> {
                         tensor = initializers.stream()
                                 .filter(i -> i.getName().equals(node.getInput(1)))
                                 .findAny()
                                 .orElse(null);
-                        layers.add(new Div(get1DParamsFromTensor(tensor)));
+                        if(tensor != null){
+                            layers.add(new Div(get1DParamsFromTensor(tensor)));
+                        }
                     }
                     case "Gemm" -> {
                         tensor = initializers.stream()
                                 .filter(i -> i.getName().equals(node.getInput(1)))
                                 .findAny()
                                 .orElse(null);
+                        if(tensor == null) return;
                         float[][] weights = get2DParamsFromTensor(tensor);
                         tensor = initializers.stream()
                                 .filter(i -> i.getName().equals(node.getInput(2)))
                                 .findAny()
                                 .orElse(null);
+                        if(tensor == null) return;
                         float[] bias = get1DParamsFromTensor(tensor);
                         layers.add(new Gemm(weights, bias));
                     }
@@ -89,21 +96,25 @@ public class NeuralNetwork {
                                 .filter(i -> i.getName().equals(node.getInput(1)))
                                 .findAny()
                                 .orElse(null);
+                        if(tensor == null) return;
                         float[] batchNormWeights = get1DParamsFromTensor(tensor);
                         tensor = model.getGraph().getInitializerList().stream()
                                 .filter(i -> i.getName().equals(node.getInput(2)))
                                 .findAny()
                                 .orElse(null);
+                        if(tensor == null) return;
                         float[] batchNormBias = get1DParamsFromTensor(tensor);
                         tensor = initializers.stream()
                                 .filter(i -> i.getName().equals(node.getInput(3)))
                                 .findAny()
                                 .orElse(null);
+                        if(tensor == null) return;
                         float[] mean = get1DParamsFromTensor(tensor);
                         tensor = initializers.stream()
                                 .filter(i -> i.getName().equals(node.getInput(4)))
                                 .findAny()
                                 .orElse(null);
+                        if(tensor == null) return;
                         float[] var = get1DParamsFromTensor(tensor);
                         var batchNorm = new BatchNorm(batchNormWeights, batchNormBias, mean, var);
                         batchNorm.setEpsilon(node.getAttribute(0).getF());

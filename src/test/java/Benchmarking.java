@@ -1,4 +1,4 @@
-import predictor.NeuralNetwork;
+import predictor.CompilerPredictor;
 import ai.onnxruntime.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -10,9 +10,9 @@ public class Benchmarking {
     private static double onnxExecutionTime;
     private static double executionTime;
 
-    private static final String FILENAME_TEST_DATA = "testDataResNet.csv";
-    private static final int INPUT_SIZE = 147;
-    private static final String FILENAME_MODEL = "modelResNet.onnx";
+    private static final String FILENAME_TEST_DATA = "test_data.csv";
+    private static final int INPUT_SIZE = 120;
+    private static final String FILENAME_MODEL = "model.onnx";
 
     public static void main(String[] args){
 
@@ -42,10 +42,10 @@ public class Benchmarking {
     }
 
     private static float[] predictUsingCompilerPredictor(float[] input){
-        NeuralNetwork ann = new NeuralNetwork(FILENAME_MODEL);
+        CompilerPredictor cp = new CompilerPredictor(FILENAME_MODEL);
 
         long startingTime = System.nanoTime();
-        float[] result = ann.predict(input);
+        float[] result = cp.predict(input);
         long finishTime = System.nanoTime();
         executionTime = (double)(finishTime - startingTime) / 1000000000;
         return result;
