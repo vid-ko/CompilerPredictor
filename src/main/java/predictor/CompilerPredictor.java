@@ -7,11 +7,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CompilerPredictor {
 
     private final List<Layer> layers;
+    private final Map<String,float[]> outputMap;
 
 
     /**
@@ -22,6 +25,7 @@ public class CompilerPredictor {
      */
     public CompilerPredictor(String pathToOnnxFile){
         layers = new ArrayList<>();
+        outputMap = new HashMap<>();
         initWithOnnxModel(pathToOnnxFile);
     }
 
@@ -35,7 +39,11 @@ public class CompilerPredictor {
     public float[] predict(float[] inputData){
         var nextInput = inputData;
         for (Layer layer : layers){
+            if(layer instanceof Add addLayer){
+                addLayer.setInput1(outputMap.get(addLayer.getInput1Name()));
+            }
             nextInput = layer.apply(nextInput);
+            outputMap.put(layer.outputName,nextInput);
         }
         return nextInput;
     }
@@ -49,13 +57,16 @@ public class CompilerPredictor {
         // TODO refactoring, make more dynamic, LayerNotFoundException
         try{
             var model = Onnx.ModelProto.parseFrom(new FileInputStream(pathToOnnxFile));
+            List<Onnx.TensorProto> initializers = model.getGraph().getInitializerList();
 
             for(var node : model.getGraph().getNodeList()){
-                List<Onnx.TensorProto> initializers = model.getGraph().getInitializerList();
                 Onnx.TensorProto tensor;
                 switch (node.getOpType()) {
                     case  "Add" -> {
                         // TODO: implement
+                        Layer addLayer = new Add(node.getInput(0));
+                        addLayer.outputName = node.getOutput(0);
+                        layers.add(addLayer);
                     }
                     case "Sub" -> {
                         tensor = initializers.stream()
@@ -63,7 +74,9 @@ public class CompilerPredictor {
                                 .findAny()
                                 .orElse(null);
                         if(tensor != null){
-                            layers.add(new Sub(get1DParamsFromTensor(tensor)));
+                            Layer subLayer = new Sub(get1DParamsFromTensor(tensor));
+                            subLayer.outputName = node.getOutput(0);
+                            layers.add(subLayer);
                         }
                     }
                     case "Div" -> {
@@ -72,7 +85,9 @@ public class CompilerPredictor {
                                 .findAny()
                                 .orElse(null);
                         if(tensor != null){
-                            layers.add(new Div(get1DParamsFromTensor(tensor)));
+                            Layer divLayer = new Div(get1DParamsFromTensor(tensor));
+                            divLayer.outputName = node.getOutput(0);
+                            layers.add(divLayer);
                         }
                     }
                     case "Gemm" -> {
@@ -88,9 +103,15 @@ public class CompilerPredictor {
                                 .orElse(null);
                         if(tensor == null) return;
                         float[] bias = get1DParamsFromTensor(tensor);
-                        layers.add(new Gemm(weights, bias));
+                        Layer gemmLayer = new Gemm(weights, bias);
+                        gemmLayer.outputName = node.getOutput(0);
+                        layers.add(gemmLayer);
                     }
-                    case "Relu" -> layers.add(new Relu());
+                    case "Relu" -> {
+                        Layer reluLayer = new Relu();
+                        reluLayer.outputName = node.getOutput(0);
+                        layers.add(reluLayer);
+                    }
                     case "BatchNormalization" -> {
                         tensor = initializers.stream()
                                 .filter(i -> i.getName().equals(node.getInput(1)))
@@ -118,6 +139,7 @@ public class CompilerPredictor {
                         float[] var = get1DParamsFromTensor(tensor);
                         var batchNorm = new BatchNorm(batchNormWeights, batchNormBias, mean, var);
                         batchNorm.setEpsilon(node.getAttribute(0).getF());
+                        batchNorm.outputName = node.getOutput(0);
                         layers.add(batchNorm);
                     }
                     default -> {

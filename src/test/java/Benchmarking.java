@@ -10,9 +10,9 @@ public class Benchmarking {
     private static double onnxExecutionTime;
     private static double executionTime;
 
-    private static final String FILENAME_TEST_DATA = "test_data.csv";
-    private static final int INPUT_SIZE = 120;
-    private static final String FILENAME_MODEL = "model.onnx";
+    private static final String FILENAME_TEST_DATA = "testDataResNet.csv";
+    private static final int INPUT_SIZE = 147;
+    private static final String FILENAME_MODEL = "modelResNet.onnx";
 
     public static void main(String[] args){
 

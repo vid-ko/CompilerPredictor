@@ -2,9 +2,18 @@ package activation;
 
 public class Add extends Layer{
 
-    private final float[] input1;
+    private float[] input1;
+    private final String input1Name;
 
-    public Add(float[] input1){
+    public Add(String input1Name){
+        this.input1Name = input1Name;
+    }
+
+    public String getInput1Name(){
+        return this.input1Name;
+    }
+
+    public void setInput1(float[] input1){
         this.input1 = input1;
     }
 

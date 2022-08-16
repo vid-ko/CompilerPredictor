@@ -2,6 +2,8 @@ package activation;
 
 public abstract class Layer {
 
+    public String outputName;
+
     /**
      *  Applies layer specific matrix operations to the input
      *  and returns the result
