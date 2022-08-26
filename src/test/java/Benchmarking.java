@@ -1,8 +1,21 @@
+import org.tribuo.*;
+import org.tribuo.classification.Label;
+import org.tribuo.classification.LabelFactory;
+import org.tribuo.data.csv.CSVDataSource;
+import org.tribuo.data.csv.CSVIterator;
+import org.tribuo.data.csv.CSVLoader;
+import org.tribuo.datasource.ListDataSource;
+import org.tribuo.evaluation.TrainTestSplitter;
+import org.tribuo.interop.onnx.*;
+import org.tribuo.regression.RegressionFactory;
+import org.tribuo.regression.Regressor;
+import org.tribuo.regression.evaluation.RegressionEvaluator;
 import predictor.CompilerPredictor;
 import ai.onnxruntime.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Benchmarking {
@@ -10,7 +23,7 @@ public class Benchmarking {
     private static double onnxExecutionTime;
     private static double executionTime;
 
-    private static final String FILENAME_TEST_DATA = "testDataResNet.csv";
+    private static final String FILENAME_TEST_DATA = "testDataResNet2.csv";
     private static final int INPUT_SIZE = 147;
     private static final String FILENAME_MODEL = "modelResNet.onnx";
 
@@ -18,10 +31,16 @@ public class Benchmarking {
 
         System.out.println("Starting... ");
 
+        //predictUsingTribuo(null);
+
+
 
 
         // read input data
         float[] input = Arrays.copyOfRange(readTestDataFromCSV("src/test/java/" + FILENAME_TEST_DATA), 1, INPUT_SIZE+1);
+
+
+
 
         var result = predictUsingCompilerPredictor(input);
         var onnxResult = predictUsingONNXRuntime(input);
@@ -88,6 +107,66 @@ public class Benchmarking {
         return output;
     }
 
+    private static float[] predictUsingTribuo(float[] testData){
+
+
+        RegressionFactory regressionFactory = new RegressionFactory();
+
+
+
+        Map<Regressor,Integer> ptOutMapping = new HashMap<>();
+        for (int i = 0; i < 5; i++) {
+            ptOutMapping.put(new Regressor("y"+i,0 ), i);
+        }
+        //ptOutMapping.put(new Regressor("255", 0), 0);
+        String[] headers = new String[INPUT_SIZE];
+        for (int i = 0; i < headers.length; i++){
+            headers[i] = "x";
+        }
+        List<Prediction<Regressor>> result = null;
+        var ortEnv = OrtEnvironment.getEnvironment();
+        var sessionOpts = new OrtSession.SessionOptions();
+
+        var denseTransformer = new DenseTransformer();
+
+        try {
+            //OrtSession session = ortEnv.createSession(FILENAME_MODEL, new OrtSession.SessionOptions());
+
+            Map<String, Integer> ptFeatMapping = new HashMap<>();
+            for (int i = 0; i < INPUT_SIZE; i++) {
+                ptFeatMapping.put("x"+i, i);
+            }
+            //ptFeatMapping.put("input.1",0);
+
+
+
+            var model = ONNXExternalModel.createOnnxModel(regressionFactory, ptFeatMapping, ptOutMapping,
+                    denseTransformer, new RegressorTransformer(), sessionOpts, Paths.get(FILENAME_MODEL), "input.1");
+            var testFilePath = Paths.get("src/test/java/" +FILENAME_TEST_DATA);
+
+            var csvLoader = new CSVLoader<>(regressionFactory);
+            var dataSource = csvLoader.loadDataSource(testFilePath,"net_output_0");
+            var splitter = new TrainTestSplitter<>(dataSource, 0.0f, 0L);
+            Dataset<Regressor> evalData = new MutableDataset<>(splitter.getTest());
+
+            //var dataSource = new CSVLoader<>(regressionFactory).loadDataSource( testFilePath,"x", headers);
+
+
+            //var s = regressionFactory.getEvaluator().evaluate(model, evalData).toString();
+            //System.out.println(s);
+            result = model.predict(evalData);
+
+            var z = 5;
+        } catch (OrtException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        return null;
+    }
+
     private static float[] readTestDataFromCSV(String filename){
         float[] floats = null;
         List<List<String>> records = new ArrayList<>();
@@ -100,9 +179,9 @@ public class Benchmarking {
         } catch (IOException e){
             e.printStackTrace();
         }
-        floats = new float[records.get(2).size()];
-        for (int i = 0; i < records.get(2).size(); i++){
-            floats[i] = Float.parseFloat(records.get(2).get(i));
+        floats = new float[records.get(1).size()];
+        for (int i = 0; i < records.get(1).size(); i++){
+            floats[i] = Float.parseFloat(records.get(1).get(i));
         }
         return floats;
     }

@@ -53,7 +53,7 @@ public class CompilerPredictor {
      *
      * @param pathToOnnxFile
      */
-    public void initWithOnnxModel(String pathToOnnxFile){
+    private void initWithOnnxModel(String pathToOnnxFile){
         // TODO refactoring, make more dynamic, LayerNotFoundException
         try{
             var model = Onnx.ModelProto.parseFrom(new FileInputStream(pathToOnnxFile));
