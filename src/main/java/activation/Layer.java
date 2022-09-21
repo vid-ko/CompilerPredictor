@@ -1,8 +1,16 @@
 package activation;
 
+/**
+ * Allows the implementation of different neural network layers
+ * and performing its operation by calling the apply method
+ */
 public abstract class Layer {
 
+    /**
+     * name to identify the layers output
+     */
     public String outputName;
+
 
     /**
      *  Applies layer specific matrix operations to the input

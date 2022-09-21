@@ -8,6 +8,10 @@ import ai.onnxruntime.OrtSession;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Wrapper class to make predictions on a set of features given as float array
+ * by using the ONNX Runtime
+ */
 public class OnnxPredictor extends Predictor implements AutoCloseable{
 
 

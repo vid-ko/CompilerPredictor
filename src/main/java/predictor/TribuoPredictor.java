@@ -20,20 +20,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
+/**
+ * Wrapper class to make predictions on a set of features given as float array
+ * by using Tribuo
+ */
 public class TribuoPredictor extends Predictor{
 
-    private ONNXExternalModel<Regressor> inferneceModel;
+    private ONNXExternalModel<Regressor> inferenceModel;
     private RegressionFactory regressionFactory;
 
 
-    public TribuoPredictor(String modelFilePath, int inputSize, int outputSize){
-        initInferenceModel(modelFilePath, inputSize, outputSize);
+    public TribuoPredictor(String modelFilePath, String inputName, int inputSize, int outputSize){
+        initInferenceModel(modelFilePath, inputName, inputSize, outputSize);
     }
 
 
     @Override
     public float[] predict(float[] features) {
-        float[] output = null;
+        float[] output;
 
         List<Feature> input = new ArrayList<>();
         for (int i = 0; i < features.length; i++){
@@ -48,7 +53,7 @@ public class TribuoPredictor extends Predictor{
         DataSource<Regressor> datasrc = new ListDataSource<Regressor>(list,regressionFactory, prov);
         var splitter = new TrainTestSplitter<>(datasrc, 0.0f, 0L);
         Dataset<Regressor> evalData = new MutableDataset<>(splitter.getTest());
-        var result = inferneceModel.predict(evalData);
+        var result = inferenceModel.predict(evalData);
         double[] doubles = result.get(0).getOutput().getValues();
 
         output = new float[doubles.length];
@@ -60,7 +65,7 @@ public class TribuoPredictor extends Predictor{
     }
 
 
-    private void initInferenceModel(String modelFilePath, int inputSize, int outputSize) {
+    private void initInferenceModel(String modelFilePath, String inputName, int inputSize, int outputSize) {
         regressionFactory = new RegressionFactory();
 
         Map<Regressor, Integer> ptOutMapping = new HashMap<>();
@@ -79,8 +84,8 @@ public class TribuoPredictor extends Predictor{
                 ptFeatMapping.put("x" + i, i);
             }
 
-            inferneceModel = ONNXExternalModel.createOnnxModel(regressionFactory, ptFeatMapping, ptOutMapping,
-                    denseTransformer, new RegressorTransformer(), sessionOpts, Paths.get(modelFilePath), "input.1");
+            inferenceModel = ONNXExternalModel.createOnnxModel(regressionFactory, ptFeatMapping, ptOutMapping,
+                    denseTransformer, new RegressorTransformer(), sessionOpts, Paths.get(modelFilePath), inputName);
 
         } catch (OrtException e) {
             e.printStackTrace();
